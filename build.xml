@@ -1,0 +1,185 @@
+<?xml version="1.0" ?>
+<project default="all" name="CosiXTK">
+	<property name="packages.include" value="org.cosiproject.xtoolkit.*" />
+	<property name="examples" value="examples" />
+	<property name="examples.main" value="org.cosiproject.xtoolkit.examples.DefaultExample" />
+
+
+
+	<tstamp>
+		<format property="TODAY" pattern="yyyy-MM-dd HH:mm:ss" />
+	</tstamp>
+	<tstamp>
+		<format property="version.date" pattern="yyyyMMdd" />
+	</tstamp>
+	<exec executable="svn" output="svn.properties">
+		<arg value="info" />
+	</exec>
+	
+	<!-- Using Javascript functions to convert the string -->
+	<script language="javascript">
+		<![CDATA[
+
+		            // getting the value
+		            lowercaseValue = project.getProperty("ant.project.name");
+					lower = lowercaseValue.toLowerCase();
+		            // concatenate the uppercase with the rest
+		         
+
+		            // store the result in a new property
+		            project.setProperty("lower",lower);
+
+		        ]]>
+	</script>
+	<buildnumber file="build.num" />
+	<property prefix="svn" file="svn.properties" />
+	<delete file="svn.properties" />
+	<property prefix="dev" file="dev.properties" />
+	<property name="build.dir" value="build" />
+	<property name="src" value="src" />
+	<property name="lib" value="libs" />
+	<property name="version.main" value="0.1" />
+	<property name="version.revision" value="${svn.Revision}" />
+	<property name="version.final" value="${version.main}.${version.revision}" />
+	<property name="output" value="${lower}-${version.final}" />
+	<property name="output.zip" value="${lower}-${version.final}.zip" />
+	<property name="output.src" value="${lower}-${version.final}-src.jar" />
+	<property name="build.releases" value="releases" />
+	<property name="release.base" value="${build.releases}${file.separator}${output}" />
+
+	<property name="debug" value="off" />
+	<mkdir dir="${release.base}" />
+
+
+	<target name="init">
+		<echo>${lower}</echo>
+		<delete dir="${build.dir}" />
+		<mkdir dir="${build.dir}" />
+	</target>
+
+	<target name="compile" depends="init">
+		<javac srcdir="${src}" destdir="${build.dir}" debug="${debug}">
+			<classpath>
+				<fileset dir="${lib}">
+					<include name="**/*.jar" />
+				</fileset>
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="jar" depends="compile">
+		<jar destfile="${output.jar}" basedir="${build.dir}">
+
+			<fileset dir="${build.dir}/">
+			</fileset>
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Built-On" value="${os.name} ${os.version} (${os.arch})" />
+				<attribute name="Built-Date" value="${TODAY}" />
+				<attribute name="Specification-Version" value="${version.final}" />
+				<attribute name="Specification-Vendor" value="The Cosi Project" />
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="javadoc">
+		<javadoc verbose="false" packagenames="${packages}" sourcepath="src" excludepackagenames="" defaultexcludes="yes" destdir="javadoc" author="true" version="true" use="true" windowtitle="CosiTK - The Cosi ToolKit" />
+	</target>
+
+	<target name="generate-src-jar" depends="compile">
+		<jar destfile="${build.releases}${file.separator}${output}${file.separator}${output}-src.jar" basedir="${src}">
+			<include name="**/*.java" />
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Built-On" value="${os.name} ${os.version} (${os.arch})" />
+				<attribute name="Built-Date" value="${TODAY}" />
+				<attribute name="Specification-Version" value="${version.final}" />
+				<attribute name="Specification-Vendor" value="The Cosi Project" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="generate-bin-jar" depends="compile">
+		<jar destfile="${build.releases}${file.separator}${output}${file.separator}${output}.jar" basedir="${build.dir}">
+			<include name="**/*.class" />
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Built-On" value="${os.name} ${os.version} (${os.arch})" />
+				<attribute name="Built-Date" value="${TODAY}" />
+				<attribute name="Specification-Version" value="${version.final}" />
+				<attribute name="Specification-Vendor" value="The Cosi Project" />
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="generate-examples-jar" depends="compile">
+		<mkdir dir="${build.dir}${file.separator}examples" />
+		<javac srcdir="${examples}" destdir="${build.dir}${file.separator}examples" debug="${debug}">
+			<classpath>
+				<fileset dir="${lib}">
+					<include name="**/*.jar" />
+				</fileset>
+			</classpath>
+		</javac>
+		<jar destfile="${build.releases}${file.separator}${output}${file.separator}${lower}-examples-${version.final}.jar" basedir="${build.dir}${file.separator}examples">
+			<include name="**/*.class" />
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Built-On" value="${os.name} ${os.version} (${os.arch})" />
+				<attribute name="Built-Date" value="${TODAY}" />
+				<attribute name="Main-Class" value="${examples.main}" />
+				<attribute name="Specification-Version" value="${version.final}" />
+				<attribute name="Specification-Vendor" value="The Cosi Project" />
+				
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="prepare-release">
+		<copy todir="${release.base}${file.separator}javadoc">
+			<fileset dir="javadoc" />
+		</copy>
+	</target>
+
+	<target name="generate-bin-zip" depends="generate-bin-jar, generate-src-jar, prepare-release">
+		<property name="zipbase" value="${release.base}" />
+		<copy todir="${release.base}">
+			<fileset dir="include" />
+		</copy>
+		<zip destfile="${build.releases}${file.separator}${output}-bin.zip" basedir="${release.base}">
+
+		</zip>
+	</target>
+	<target name="all" depends="compile, jar">
+		<property name="outDir" value="${build.dir}${file.separator}tmp${file.separator}${build.releases}" />
+		<mkdir dir="${outDir}" />
+		<mkdir dir="${build.releases}" />
+		<copy file="${output.jar}" todir="${outDir}" />
+
+		<mkdir dir="${outDir}/doc/javadoc" />
+		<copy todir="${outDir}/doc/javadoc">
+			<fileset dir="javadoc">
+			</fileset>
+		</copy>
+
+		<zip destfile="${output.zip}" basedir="${build.dir}${file.separator}tmp">
+			<include name="${ant.project.name}/**" />
+		</zip>
+		<move file="${output.zip}" todir="${build.releases}" />
+		<checksum todir="${build.releases}" file="${build.releases}${file.separator}${output.zip}" />
+
+
+		<delete dir="${build.dir}" />
+		<delete file="svn.properties" />
+	</target>
+
+	<target name="clean">
+		<delete dir="${build.dir}" />
+	</target>
+
+	<target name="upload">
+		<!-- javadoc -->
+		<ftp server="${dev.server}" remotedir="javadoc" userid="${dev.username}" password="${dev.password}" depends="yes" passive="true">
+			<fileset dir="javadoc" />
+		</ftp>
+	</target>
+</project>
